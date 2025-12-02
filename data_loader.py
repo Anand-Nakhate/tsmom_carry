@@ -392,7 +392,7 @@ def download_universe_daily_panel(client, roots, start, end, as_of_for_definitio
 
 
 if __name__ == "__main__":
-    client = make_historical_client("db-TDpqeHtULMkRBM6sRtkTYKJgYrp6h")
+    client = make_historical_client()
 
     start_date = "2015-01-01"
     end_date = "2025-01-01"
