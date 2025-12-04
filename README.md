@@ -1,7 +1,7 @@
 # TSMOM Carry Strategy Data Pipeline
 
 
-## 🛠️ Installation
+## Installation
 
 1.  **Clone the repository**:
     ```bash
@@ -19,7 +19,7 @@
     export DATABENTO_API_KEY=your_api_key
     ```
 
-## ⚡ Usage
+## Usage
 
 ### Download Data
 Download the defined universe of futures contracts.
@@ -39,6 +39,6 @@ Execute the test suite to verify integrity.
 make test
 ```
 
-## 🛡️ License
+## License
 
 Proprietary and Confidential.
