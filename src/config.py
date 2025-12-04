@@ -13,7 +13,7 @@ class RootContract:
     region: str
 
 # Global Universe Definition
-GLBX_UNIVERSE: List[RootContract] = [
+GLBX_UNIVERSE = [
     # Equity
     RootContract("GLBX.MDP3", "ES.FUT",  "Equity",    "US"),
     RootContract("GLBX.MDP3", "NQ.FUT",  "Equity",    "US"),
