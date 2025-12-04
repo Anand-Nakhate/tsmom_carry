@@ -3,6 +3,7 @@ Master Dataset Processor.
 Loads raw Databento files, processes them, and creates the master dataset.
 """
 import os
+import logging
 import functools
 import concurrent.futures
 from pathlib import Path
@@ -12,6 +13,17 @@ import pandas as pd
 import databento as db
 
 from src.config import GLBX_UNIVERSE, RootContract
+
+# Setup Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("logs/process.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Configuration
 DATA_DIR = Path("./databento_data")
@@ -41,6 +53,7 @@ def _load_single_file(file_path: Path, add_date_from_filename: bool = False) -> 
                     date_val = pd.to_datetime(date_str).date()
                     df['date'] = date_val
             except Exception as e:
+                # Use print here as this runs in a subprocess where logger might not be configured
                 print(f"      -> [WARN] Failed to extract date from {file_path.name}: {e}")
         return df
     except Exception as e:
@@ -50,21 +63,23 @@ def _load_single_file(file_path: Path, add_date_from_filename: bool = False) -> 
 class DatasetProcessor:
     def __init__(self, data_dir: Path = DATA_DIR):
         self.data_dir = data_dir
+        # Ensure log directory exists
+        Path("logs").mkdir(exist_ok=True)
 
     def load_data_from_dir(self, directory: Path, limit: int = None, add_date_from_filename: bool = False) -> pd.DataFrame:
-        print(f"   -> Loading from {directory}...")
+        logger.info(f"Loading from {directory}...")
         if directory.is_file():
             return db.DBNStore.from_file(directory).to_df()
             
         files = sorted(list(directory.glob("*.dbn.zst")))
         if not files:
-            print(f"   -> [WARN] No .dbn.zst files found in {directory}")
+            logger.warning(f"No .dbn.zst files found in {directory}")
             return pd.DataFrame()
         
         if limit:
             files = files[:limit]
         
-        print(f"   -> Starting parallel load of {len(files)} files...")
+        logger.info(f"Starting parallel load of {len(files)} files...")
         max_workers = os.cpu_count() or 4
         
         dfs = []
@@ -76,7 +91,7 @@ class DatasetProcessor:
         if not dfs:
             return pd.DataFrame()
             
-        print(f"   -> Concatenating {len(dfs)} DataFrames...")
+        logger.info(f"Concatenating {len(dfs)} DataFrames...")
         return pd.concat(dfs, ignore_index=True)
 
     def process_data(self, 
@@ -86,10 +101,10 @@ class DatasetProcessor:
         """
         Reads DBN files from directories and merges them into a single panel.
         """
-        print("\n[INFO] Processing local DBN files...")
+        logger.info("Processing local DBN files...")
 
         # --- A. Load Definitions (Metadata) ---
-        print("   -> Loading Definitions...")
+        logger.info("Loading Definitions...")
         df_def = self.load_data_from_dir(file_paths["definition"], limit=limit)
         
         if 'instrument_class' in df_def.columns:
@@ -105,7 +120,7 @@ class DatasetProcessor:
         df_meta = df_def[meta_cols].copy()
 
         # --- B. Load OHLCV ---
-        print("   -> Loading OHLCV...")
+        logger.info("Loading OHLCV...")
         df_ohlcv = self.load_data_from_dir(file_paths["ohlcv-1d"], limit=limit, add_date_from_filename=True)
         
         # Standardize Date
@@ -114,10 +129,10 @@ class DatasetProcessor:
                  if 'ts_event' in df_ohlcv.columns:
                     df_ohlcv['date'] = pd.to_datetime(df_ohlcv['ts_event']).dt.date
                  else:
-                    print("   -> [WARN] 'date' and 'ts_event' missing in OHLCV.")
+                    logger.warning("'date' and 'ts_event' missing in OHLCV.")
         
         # --- C. Load Statistics (Settlement & OI) ---
-        print("   -> Loading Statistics...")
+        logger.info("Loading Statistics...")
         df_stats = self.load_data_from_dir(file_paths["statistics"], limit=limit, add_date_from_filename=True)
         
         if not df_stats.empty:
@@ -175,12 +190,12 @@ class DatasetProcessor:
                 df_stats_clean[col] = pd.Series(dtype='object')
 
         # --- D. Merge All ---
-        print("   -> Merging...")
+        logger.info("Merging...")
         full_df = pd.merge(df_ohlcv, df_meta, on='instrument_id', how='left')
         full_df = pd.merge(full_df, df_stats_clean, on=['instrument_id', 'date'], how='left')
         
         # --- E. Enriched Metadata (Asset Class, Region) ---
-        print("   -> Mapping Asset Classes...")
+        logger.info("Mapping Asset Classes...")
         root_lookup = {}
         for r in universe:
             code = r.parent.split('.')[0] 
@@ -227,7 +242,8 @@ if __name__ == "__main__":
     #     "statistics": DATA_DIR / "GLBX-20251203-FYW5M8HAT5"
     # }
     
+    # logger.info("Please configure the 'files' dictionary in __main__ to point to your specific job folders.")
     # df_final = processor.process_data(files, GLBX_UNIVERSE)
     # df_final.to_csv(OUTPUT_FILE, index=False)
-    # print(f"[SUCCESS] Saved to {OUTPUT_FILE}")
-
+    # logger.info(f"Saved to {OUTPUT_FILE}")
+    logger.info("Processor ready. Configure paths in __main__ to execute.")
