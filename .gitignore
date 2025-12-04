@@ -25,6 +25,7 @@ databento_data/
 _archive/
 *.csv
 *.log
+tsmom_carry.egg-info/
 
 # Jupyter
 .ipynb_checkpoints
