@@ -79,10 +79,9 @@ def load_and_clean(file_path):
     return df
 
 def run_sanity_checks(df):
-    # Runs systematic checks for data integrity including missing values, OHLC consistency, and negative prices
+    # Runs systematic checks for data integrity
     logger.info("Running sanity checks...")
     issues = {}
-
     issues['na_counts'] = df.isna().sum().to_dict()
 
     if all(c in df.columns for c in ['open', 'high', 'low', 'close']):
@@ -111,7 +110,7 @@ def run_sanity_checks(df):
     return issues
 
 def generate_universe_audit(df):
-    # Generates a summary of coverage by root including date ranges and volume statistics
+    # Generates a summary of coverage by root
     logger.info("Generating universe audit...")
     if 'parent' not in df.columns:
         logger.warning("'parent' column missing, cannot generate audit.")

@@ -10,10 +10,7 @@ os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("logs/download.log"),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler("logs/download.log"), logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
@@ -52,14 +49,9 @@ class FuturesDownloader:
             def submit(schema):
                 try:
                     job = self.client.batch.submit_job(
-                        dataset=dataset,
-                        symbols=symbols,
-                        schema=schema,
-                        start=start_date,
-                        end=end_date,
-                        stype_in="parent",
-                        encoding="dbn",
-                        compression="zstd"
+                        dataset=dataset, symbols=symbols, schema=schema,
+                        start=start_date, end=end_date, stype_in="parent",
+                        encoding="dbn", compression="zstd"
                     )
                     return get_job_id(job)
                 except Exception as e:
@@ -85,12 +77,10 @@ class FuturesDownloader:
         
         while len(completed_jobs) < len(job_map):
             time.sleep(10)
-            
             jobs_state = self.client.batch.list_jobs(since=pd.Timestamp.utcnow().floor('D'))
             
             for schema, jid in job_map.items():
-                if jid in completed_jobs:
-                    continue
+                if jid in completed_jobs: continue
                 
                 target_job = None
                 for j in jobs_state:
@@ -98,20 +88,14 @@ class FuturesDownloader:
                         target_job = j
                         break
                 
-                if not target_job:
-                    continue
-                
+                if not target_job: continue
                 state = get_job_state(target_job)
                 
                 if state == 'done':
                     logger.info(f"Downloading {schema} (Job {jid})...")
-                    local_files = self.client.batch.download(
-                        job_id=jid, 
-                        output_dir=self.data_dir
-                    )
+                    local_files = self.client.batch.download(job_id=jid, output_dir=self.data_dir)
                     file_paths[schema] = local_files[0]
                     completed_jobs.add(jid)
-                
                 elif state == 'failed':
                     logger.error(f"Job {jid} failed on Databento side.")
                     raise RuntimeError(f"Job {jid} failed on Databento side.")
@@ -126,7 +110,6 @@ if __name__ == "__main__":
         exit(1)
 
     downloader = FuturesDownloader(API_KEY)
-    
     start_date = "2015-01-01"
     end_date = "2025-01-01"
     

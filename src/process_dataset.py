@@ -11,10 +11,7 @@ os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("logs/process.log"),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.FileHandler("logs/process.log"), logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
@@ -22,7 +19,7 @@ DATA_DIR = Path("./databento_data")
 OUTPUT_FILE = DATA_DIR / "master_dataset.csv"
 
 def _load_single_file(file_path, add_date_from_filename=False):
-    # Helper function to load a single DBN file, intended for parallel execution
+    # Helper function to load a single DBN file
     try:
         store = db.DBNStore.from_file(file_path)
         df = store.to_df()
@@ -55,7 +52,7 @@ class DatasetProcessor:
         os.makedirs("logs", exist_ok=True)
 
     def load_data_from_dir(self, directory, limit=None, add_date_from_filename=False):
-        # Loads data from a directory of DBN files, optionally in parallel
+        # Loads data from a directory of DBN files
         logger.info(f"Loading from {directory}...")
         if directory.is_file():
             return db.DBNStore.from_file(directory).to_df()
@@ -84,7 +81,7 @@ class DatasetProcessor:
         return pd.concat(dfs, ignore_index=True)
 
     def process_data(self, file_paths, universe, limit=None):
-        # Reads DBN files from directories, merges them into a single panel, and enriches with metadata
+        # Reads DBN files, merges them, and enriches with metadata
         logger.info("Processing local DBN files...")
 
         logger.info("Loading Definitions...")
@@ -122,7 +119,6 @@ class DatasetProcessor:
                 db.StatType.CLEARED_VOLUME
             ])
             df_stats = df_stats[mask].copy()
-            
             df_stats = df_stats.sort_values('ts_event').groupby(['instrument_id', 'date', 'stat_type']).tail(1)
 
             if not df_stats.empty:
@@ -131,27 +127,16 @@ class DatasetProcessor:
                     columns='stat_type', 
                     values=['price', 'quantity']
                 )
-                
-                try:
-                    settle = df_stats_pivoted[('price', db.StatType.SETTLEMENT_PRICE)]
-                except KeyError:
-                    settle = pd.Series(dtype=float)
+                try: settle = df_stats_pivoted[('price', db.StatType.SETTLEMENT_PRICE)]
+                except KeyError: settle = pd.Series(dtype=float)
 
-                try:
-                    oi = df_stats_pivoted[('quantity', db.StatType.OPEN_INTEREST)]
-                except KeyError:
-                    oi = pd.Series(dtype=float)
+                try: oi = df_stats_pivoted[('quantity', db.StatType.OPEN_INTEREST)]
+                except KeyError: oi = pd.Series(dtype=float)
 
-                try:
-                    vol = df_stats_pivoted[('quantity', db.StatType.CLEARED_VOLUME)]
-                except KeyError:
-                    vol = pd.Series(dtype=float)
+                try: vol = df_stats_pivoted[('quantity', db.StatType.CLEARED_VOLUME)]
+                except KeyError: vol = pd.Series(dtype=float)
 
-                df_stats_clean = pd.DataFrame({
-                    'settlement': settle,
-                    'open_interest': oi,
-                    'cleared_volume_stat': vol
-                }).reset_index()
+                df_stats_clean = pd.DataFrame({'settlement': settle, 'open_interest': oi, 'cleared_volume_stat': vol}).reset_index()
             else:
                  df_stats_clean = pd.DataFrame(columns=['instrument_id', 'date', 'settlement', 'open_interest', 'cleared_volume_stat'])
         else:
@@ -185,13 +170,11 @@ class DatasetProcessor:
             id_map[row.instrument_id] = (parent, asset, region)
             
         mapped_data = [id_map.get(i, (None, None, None)) for i in full_df['instrument_id']]
-        
         full_df['parent'] = [x[0] for x in mapped_data]
         full_df['asset_class'] = [x[1] for x in mapped_data]
         full_df['region'] = [x[2] for x in mapped_data]
         
         full_df = full_df.sort_values(['parent', 'date', 'expiration'])
-        
         cols = ['date', 'parent', 'asset_class', 'region', 'symbol', 'expiration', 'open', 'high', 'low', 'close', 'volume', 'settlement', 'open_interest']
         remaining = [c for c in full_df.columns if c not in cols]
         full_df = full_df[cols + remaining]
@@ -200,25 +183,18 @@ class DatasetProcessor:
 
 if __name__ == "__main__":
     processor = DatasetProcessor()
-    
     files = {}
     candidates = [d for d in DATA_DIR.iterdir() if d.is_dir()]
     
     for d in candidates:
         sample_files = list(d.glob("*.dbn.zst"))
-        if not sample_files:
-            continue
-            
+        if not sample_files: continue
         try:
             metadata = db.DBNStore.from_file(sample_files[0])
             schema = metadata.schema
-            
-            if schema == 'definition':
-                files["definition"] = d
-            elif schema == 'ohlcv-1d':
-                files["ohlcv-1d"] = d
-            elif schema == 'statistics':
-                files["statistics"] = d
+            if schema == 'definition': files["definition"] = d
+            elif schema == 'ohlcv-1d': files["ohlcv-1d"] = d
+            elif schema == 'statistics': files["statistics"] = d
         except Exception as e:
             logger.warning(f"Could not identify schema for {d}: {e}")
 
@@ -229,4 +205,3 @@ if __name__ == "__main__":
         logger.info(f"Saved master dataset to {OUTPUT_FILE}")
     else:
         logger.error(f"Could not find all required data folders. Found: {list(files.keys())}")
-        logger.error("Ensure you have 'definition', 'ohlcv-1d', and 'statistics' data in databento_data/")

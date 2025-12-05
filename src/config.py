@@ -3,7 +3,6 @@ Configuration for the TSMOM Carry project.
 Defines the universe of futures contracts to be downloaded and processed.
 """
 from dataclasses import dataclass
-from typing import List
 
 @dataclass(frozen=True)
 class RootContract:
