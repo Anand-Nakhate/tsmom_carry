@@ -1,7 +1,7 @@
-# TSMOM & Carry: State-of-the-Art Quantitative Research
+# TSMOM & Carry
 
 ## Overview
-This project implements a professional-grade quantitative research pipeline for Time-Series Momentum (TSMOM) and Carry strategies across a global universe of futures contracts. It features robust data engineering, advanced signal processing, volatility scaling, and sophisticated portfolio stacking methods.
+This project implements a quantitative research pipeline for Time-Series Momentum (TSMOM) and Carry strategies across a global universe of futures contracts. It features  data engineering, signal processing, volatility scaling, and portfolio stacking methods.
 
 ## Key Features
 - **Data Pipeline:** Automated ingestion of Databento `.dbn` files, cleaning, and continuous series construction.
