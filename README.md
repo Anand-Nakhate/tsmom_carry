@@ -24,6 +24,7 @@ This project implements a professional-grade quantitative research pipeline for 
 │   ├── 02_term_structure.ipynb
 │   ├── 03_data_analysis.ipynb
 │   ├── 04_signal_generation.ipynb
+│   ├── 05_volatility_calculation.ipynb
 │   ├── 06_portfolio_construction.ipynb
 │   └── 07_backtest_and_robustness.ipynb
 ├── src/                    # Source code modules
@@ -36,6 +37,7 @@ This project implements a professional-grade quantitative research pipeline for 
 │   ├── process_dataset.py  # Data processing pipeline
 │   ├── signals.py          # Signal generation logic
 │   └── term_structure.py   # Term structure calculations
+│   └── vol.py              # Vol calculations
 └── README.md
 ```
 
